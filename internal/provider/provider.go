@@ -292,6 +292,7 @@ func (p *IncusProvider) Resources(_ context.Context) []func() resource.Resource 
 		cluster.NewClusterGroupMemberResource,
 		cluster.NewClusterGroupResource,
 		image.NewImageResource,
+		image.NewImageAliasResource,
 		instance.NewInstanceResource,
 		instance.NewInstanceSnapshotResource,
 		network.NewNetworkACLResource,

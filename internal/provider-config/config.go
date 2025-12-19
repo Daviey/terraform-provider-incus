@@ -80,6 +80,32 @@ func NewIncusProvider(incusConfig *incus_config.Config, acceptServerCert bool) *
 	}
 }
 
+// DefaultRemote returns the configured default remote name, falling back to "local".
+func (p *IncusProviderConfig) DefaultRemote() string {
+	if p == nil || p.incusConfig == nil {
+		return "local"
+	}
+
+	if p.incusConfig.DefaultRemote != "" {
+		return p.incusConfig.DefaultRemote
+	}
+
+	return "local"
+}
+
+// DefaultProject returns the configured default project name, falling back to "default".
+func (p *IncusProviderConfig) DefaultProject() string {
+	if p == nil || p.incusConfig == nil {
+		return "default"
+	}
+
+	if p.incusConfig.ProjectOverride != "" {
+		return p.incusConfig.ProjectOverride
+	}
+
+	return "default"
+}
+
 // InstanceServer returns an IncusInstanceServer client for the given remote.
 // An error is returned if the remote is not a InstanceServer.
 func (p *IncusProviderConfig) InstanceServer(remoteName string, project string, target string) (incus.InstanceServer, error) {
