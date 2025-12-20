@@ -101,6 +101,12 @@ The `remote` block supports:
 
 * `skip_tls_verify` - *Optional* - Skip TLS certificate verification when connecting to the Incus remote. Valid values are `true` and `false`. Defaults to `false`. **Warning**: This option is insecure and should only be used for development/testing environments with self-signed certificates.
 
+## Error Handling
+
+The provider includes helpful error messages for common issues:
+
+- **Storage Volume Conflicts**: If you encounter a "UNIQUE constraint failed" error when creating an instance, it typically means an orphaned storage volume exists from a previous deployment. The error message will provide specific commands to resolve the issue.
+
 ## Undefined Remote
 
 If you choose to *not* define a `remote`, this provider will attempt

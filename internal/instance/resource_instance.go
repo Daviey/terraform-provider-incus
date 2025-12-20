@@ -1227,7 +1227,7 @@ func (r InstanceResource) createInstanceFromImage(ctx context.Context, server in
 	}
 
 	if err != nil {
-		diags.AddError(fmt.Sprintf("Failed to create instance %q", instance.Name), err.Error())
+		diags.AddError(fmt.Sprintf("Failed to create instance %q", instance.Name), formatInstanceCreationError(instance.Name, err))
 		return diags
 	}
 
@@ -1287,7 +1287,7 @@ func (r InstanceResource) createInstanceFromSourceFile(ctx context.Context, serv
 	}
 
 	if err != nil {
-		diags.AddError(fmt.Sprintf("Failed to create instance: %q", name), err.Error())
+		diags.AddError(fmt.Sprintf("Failed to create instance: %q", name), formatInstanceCreationError(name, err))
 		return diags
 	}
 
@@ -1376,7 +1376,7 @@ func (r InstanceResource) createInstanceFromSourceInstance(ctx context.Context, 
 		}
 
 		if err != nil {
-			diags.AddError(fmt.Sprintf("Failed to create instance %q", name), err.Error())
+			diags.AddError(fmt.Sprintf("Failed to create instance %q", name), formatInstanceCreationError(name, err))
 			return diags
 		}
 
@@ -1440,7 +1440,7 @@ func (r InstanceResource) createInstanceFromSourceInstance(ctx context.Context, 
 	}
 
 	if err != nil {
-		diags.AddError(fmt.Sprintf("Failed to create instance %q from snapshot %q", name, sourceSnapshotName), err.Error())
+		diags.AddError(fmt.Sprintf("Failed to create instance %q from snapshot %q", name, sourceSnapshotName), formatInstanceCreationError(name, err))
 		return diags
 	}
 
@@ -1483,7 +1483,7 @@ func (r InstanceResource) createInstanceWithoutImage(ctx context.Context, server
 	}
 
 	if err != nil {
-		diags.AddError(fmt.Sprintf("Failed to create instance %q", instance.Name), err.Error())
+		diags.AddError(fmt.Sprintf("Failed to create instance %q", instance.Name), formatInstanceCreationError(instance.Name, err))
 		return diags
 	}
 
@@ -1975,4 +1975,29 @@ func ToWaitForConfigMap(ctx context.Context, waitForSet types.Set) (map[string]W
 	}
 
 	return waitForMap, diags
+}
+
+// formatInstanceCreationError formats instance creation errors with helpful context
+func formatInstanceCreationError(instanceName string, err error) string {
+	errMsg := err.Error()
+
+	// Check for storage volume UNIQUE constraint error
+	if strings.Contains(errMsg, "UNIQUE constraint failed") &&
+	   strings.Contains(errMsg, "storage_volumes") {
+		return fmt.Sprintf(`%s
+
+This error typically occurs when a storage volume with the name %q already exists in the database,
+possibly from a previous failed deployment or incomplete cleanup.
+
+To resolve this issue, you can:
+1. Check for orphaned storage volumes: incus storage volume list default
+2. Remove the orphaned volume from the database if it exists without an associated instance:
+   incus admin sql global 'DELETE FROM storage_volumes WHERE name="%s"'
+3. Or rename the existing instance/volume to free up the name
+
+After cleanup, re-run terraform apply.`, errMsg, instanceName, instanceName)
+	}
+
+	// Return original error for other cases
+	return errMsg
 }
