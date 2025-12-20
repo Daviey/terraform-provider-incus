@@ -48,6 +48,14 @@ provider "incus" {
     address = "https://10.1.2.8"
     token   = "token"
   }
+
+  # Example with self-signed certificate (insecure - development only)
+  remote {
+    name             = "dev-server"
+    address          = "https://192.168.1.100:8443"
+    token            = "token"
+    skip_tls_verify  = true
+  }
 }
 ```
 
@@ -90,6 +98,8 @@ The `remote` block supports:
 * `token` - *Optional* - The one-time trust [token](https://linuxcontainers.org/incus/docs/main/authentication/#adding-client-certificates-using-tokens) used for initial authentication with the Incus remote.
 
 * `public` - *Optional* - Public image server. Valid values are `true` and `false`. Defaults to `false`.
+
+* `skip_tls_verify` - *Optional* - Skip TLS certificate verification when connecting to the Incus remote. Valid values are `true` and `false`. Defaults to `false`. **Warning**: This option is insecure and should only be used for development/testing environments with self-signed certificates.
 
 ## Undefined Remote
 
