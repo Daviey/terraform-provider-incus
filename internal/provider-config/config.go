@@ -30,6 +30,7 @@ type IncusProviderRemoteConfig struct {
 	Token              string
 	Public             bool
 	Bootstrapped       bool
+	SkipTLSVerify      bool
 }
 
 // IncusProviderConfig contains the Provider configuration and initialized
@@ -536,6 +537,48 @@ func (p *IncusProviderConfig) setIncusConfigRemote(name string, remote incus_con
 // in a conncurrent-safe way.
 func (p *IncusProviderConfig) getIncusConfigInstanceServer(remoteName string) (incus.InstanceServer, error) {
 	p.mux.RLock()
+	remote := p.remotes[remoteName]
+	incusRemote := p.incusConfig.Remotes[remoteName]
+	p.mux.RUnlock()
+
+	// If SkipTLSVerify is enabled, create connection with InsecureSkipVerify
+	if remote.SkipTLSVerify {
+		// Get client certificates
+		certPath := p.incusConfig.ConfigPath("client.crt")
+		keyPath := p.incusConfig.ConfigPath("client.key")
+
+		certBytes, err := os.ReadFile(certPath)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to read client certificate: %v", err)
+		}
+
+		keyBytes, err := os.ReadFile(keyPath)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to read client key: %v", err)
+		}
+
+		args := &incus.ConnectionArgs{
+			TLSClientCert:      string(certBytes),
+			TLSClientKey:       string(keyBytes),
+			InsecureSkipVerify: true,
+			UserAgent:          "terraform-provider-incus/1.0",
+		}
+
+		server, err := incus.ConnectIncus(incusRemote.Addr, args)
+		if err != nil {
+			return nil, err
+		}
+
+		// When using OIDC authentication, store the returned token locally
+		if incusRemote.AuthType == incus_api.AuthenticationMethodOIDC {
+			p.incusConfig.SaveOIDCTokens()
+		}
+
+		return server, nil
+	}
+
+	// Default path: use standard GetInstanceServer
+	p.mux.RLock()
 	defer p.mux.RUnlock()
 
 	server, err := p.incusConfig.GetInstanceServer(remoteName)
@@ -545,7 +588,6 @@ func (p *IncusProviderConfig) getIncusConfigInstanceServer(remoteName string) (i
 
 	// When using OIDC authentication, store the returned token locally
 	// so the user only completes the device authorization flow once.
-	incusRemote := p.incusConfig.Remotes[remoteName]
 	if incusRemote.AuthType == incus_api.AuthenticationMethodOIDC {
 		p.incusConfig.SaveOIDCTokens()
 	}

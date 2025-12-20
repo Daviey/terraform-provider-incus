@@ -37,6 +37,7 @@ type IncusProviderRemoteModel struct {
 	AuthenticationType types.String `tfsdk:"authentication_type"`
 	Token              types.String `tfsdk:"token"`
 	Public             types.Bool   `tfsdk:"public"`
+	SkipTLSVerify      types.Bool   `tfsdk:"skip_tls_verify"`
 }
 
 // IncusProviderModel represents provider's schema.
@@ -137,6 +138,11 @@ func (p *IncusProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp
 							Optional:    true,
 							Sensitive:   true,
 							Description: "The trust token used for initial authentication with the Incus remote.",
+						},
+
+						"skip_tls_verify": schema.BoolAttribute{
+							Optional:    true,
+							Description: "Skip TLS certificate verification for this remote (insecure, use only for development/testing).",
 						},
 					},
 				},
@@ -272,6 +278,7 @@ func (p *IncusProvider) Configure(ctx context.Context, req provider.ConfigureReq
 			AuthenticationType: autheticationType,
 			Token:              remote.Token.ValueString(),
 			Public:             remote.Public.ValueBool(),
+			SkipTLSVerify:      remote.SkipTLSVerify.ValueBool(),
 		}
 
 		if data.DefaultRemote.ValueString() == remote.Name.ValueString() {
